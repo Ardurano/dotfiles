@@ -1,0 +1,39 @@
+onboarding = false
+[keys]
+prefix = "ctrl+b"
+focus_pane_left  = "prefix+h"
+focus_pane_down  = "prefix+j"
+focus_pane_up    = "prefix+k"
+focus_pane_right = "prefix+l"
+split_horizontal = "prefix+double_quote"
+split_vertical    = "prefix+percent"
+new_tab   = "prefix+c"
+close_tab = "prefix+ampersand"
+# Direct (prefix-less) tab cycling. ctrl+tab is deliberately left to WezTerm for
+# its own tabs, so herdr gets ctrl+shift+tab - WezTerm's default binding for that
+# chord is disabled in wezterm.lua so it reaches herdr instead. This replaces the
+# default prefix+n; previous_tab stays on prefix+p.
+next_tab = "ctrl+shift+tab"
+workspace_picker = "prefix+w"
+goto             = "prefix+g"
+copy_mode  = "prefix+y"  # herdr's copy-mode entry key; copy-mode's own internal keys (v/space select, y/Enter copy, q/Esc cancel) aren't configurable
+
+# Toggle the reviewr code-review pane (plugin persiyanov.reviewr). Its README
+# suggests cmd+r, but WezTerm binds SUPER+r to ReloadConfiguration and consumes it
+# before herdr ever sees it - `wezterm show-keys` lists the binding. The prefix
+# namespace is reached through ctrl+b, which WezTerm does not claim, so put it
+# there rather than disabling another WezTerm default.
+[[keys.command]]
+key = "prefix+r"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"  # <plugin_id>.<action_id> - the id, not the plugin name
+
+[ui]
+# Agents panel order: explicit choice of "spaces" (grouped by space, the default) over "priority".
+agent_panel_sort = "spaces"
+
+[theme]
+name = "terminal"
+
+[ui.toast]
+delivery = "herdr"

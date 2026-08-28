@@ -1,0 +1,20 @@
+# reviewr (persiyanov.reviewr) - code-review pane for herdr. Installed by herdr
+# itself, not Nix or Homebrew; README.md has the one-time install command.
+#
+# Deliberately minimal. reviewr validates this file all-or-nothing: one unknown
+# key, wrong type, or invalid value voids the whole file and the pane shows a
+# config error instead of falling back to the valid parts. Every key omitted here
+# is one that cannot break on a plugin upgrade, so only actual decisions are set
+# and the documented defaults are left to the plugin:
+#   default_scope = "uncommitted"  the point is reviewing an agent's work before
+#                                  it is committed, which is already the default
+#   toggle_placement = "split", toggle_direction = "right", navigator_position =
+#   "right"                        a split to the right suits a wide WezTerm window
+#   auto_open = true               no layout plugin is installed to race with it
+#                                  over the worktree.created event
+
+# One theme colors reviewr's chrome and syntax together, so a mismatch against the
+# terminal background reads poorly. WezTerm runs rose-pine-moon (see
+# home/.config/wezterm/wezterm.lua); rose-pine is the same palette's entry in
+# reviewr's list, and the only other rose-pine option is the light dawn variant.
+theme = "rose-pine"
