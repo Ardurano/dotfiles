@@ -1,11 +1,9 @@
-{ config, lib, pkgs, user, ... }:
+{ config, lib, pkgs, user, inputs, ... }:
 
 let
   dotfiles = "${config.home.homeDirectory}/.dotfiles";
 in
-
-{
-  home.username = user;
+{  home.username = user;
   home.homeDirectory = "/Users/${user}";
   home.stateVersion = "24.11";
   # Nix owns CLI tools; Homebrew owns GUI casks plus the few tools nixpkgs can't
@@ -55,6 +53,7 @@ in
     nerd-fonts.hack
     nerd-fonts.jetbrains-mono
     aider-chat
+    inputs.antigravity.packages.${pkgs.system}.antigravity-cli
     # System
     btop
     # AI
