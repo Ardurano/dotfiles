@@ -29,6 +29,10 @@
       "rev": "dcffbd33d04781c10c4246929c07e90a07689358",
       "src": "https://github.com/ray-x/go.nvim"
     },
+    "kotlin.nvim": {
+      "rev": "1a25f753aba7a697ba467485e1cfe05844075b17",
+      "src": "https://github.com/AlexandrosAlexiou/kotlin.nvim"
+    },
     "mason.nvim": {
       "rev": "44d1e90e1f66e077268191e3ee9d2ac97cc18e65",
       "src": "https://github.com/mason-org/mason.nvim"
@@ -61,9 +65,17 @@
       "rev": "4916d6592ede8c07973490d9322f187e07dfefac",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter"
     },
+    "oil.nvim": {
+      "rev": "b73018b75affd13fa38e2fc94ef753b465f770d7",
+      "src": "https://github.com/stevearc/oil.nvim"
+    },
     "rustaceanvim": {
       "rev": "6563b3e06bcd214dc999f7791d04176ad1af1402",
       "src": "https://github.com/mrcjkb/rustaceanvim"
+    },
+    "trouble.nvim": {
+      "rev": "bd67efe408d4816e25e8491cc5ad4088e708a69a",
+      "src": "https://github.com/folke/trouble.nvim"
     },
     "which-key.nvim": {
       "rev": "3aab2147e74890957785941f0c1ad87d0a44c15a",

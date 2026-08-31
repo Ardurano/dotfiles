@@ -14,6 +14,7 @@ in
     fzf       # fuzzy finder
     ripgrep   # fast search
     tree
+    wget
     # git
     git
     gh
@@ -27,6 +28,9 @@ in
     # languages and build tools
     go
     maven
+    kotlin
+    gradle
+    ktlint
     # The rustup proxies only; toolchains stay mutable in ~/.rustup, so
     # per-project rust-toolchain.toml and `rustup override` keep working.
     # Pinning rustc/cargo from nixpkgs instead would give up both.
@@ -214,6 +218,9 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.pi/agent/models.json";
   home.file.".pi/agent/settings.json".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.pi/agent/settings.json";
+
+  home.file.".gemini/antigravity-cli/settings.json".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.gemini/antigravity-cli/settings.json";
 
   home.file.".claude/CLAUDE.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/AGENTS.md";

@@ -343,6 +343,8 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 		"*.h",
 		"*.hpp",
 		"*.java",
+		"*.kt",
+		"*.kts",
 		"*.rs",
 	},
 	callback = function(args)
@@ -446,16 +448,22 @@ vim.pack.add({
 	"https://github.com/L3MON4D3/LuaSnip",
 	"https://github.com/mrcjkb/rustaceanvim",
 	"https://github.com/ray-x/go.nvim",
+	"https://github.com/stevearc/oil.nvim",
+	"https://github.com/folke/trouble.nvim",
+	"https://github.com/AlexandrosAlexiou/kotlin.nvim",
 })
 
 local function packadd(name)
 	vim.cmd("packadd " .. name)
 end
+packadd("which-key.nvim")
 packadd("nvim-treesitter")
 packadd("gitsigns.nvim")
 packadd("mini.nvim")
 packadd("fzf-lua")
 packadd("nvim-tree.lua")
+packadd("oil.nvim")
+packadd("trouble.nvim")
 -- LSP
 packadd("nvim-lspconfig")
 packadd("mason.nvim")
@@ -463,6 +471,7 @@ packadd("efmls-configs-nvim")
 packadd("blink.cmp")
 packadd("LuaSnip")
 packadd("rustaceanvim")
+packadd("kotlin.nvim")
 
 -- ============================================================================
 -- PLUGIN CONFIGS
@@ -482,6 +491,7 @@ local setup_treesitter = function()
 		"css",
 		"javascript",
 		"java",
+		"kotlin",
 		"json",
 		"lua",
 		"markdown",
@@ -562,6 +572,26 @@ end, { desc = "FZF Diagnostics Document" })
 vim.keymap.set("n", "<leader>fX", function()
 	require("fzf-lua").diagnostics_workspace()
 end, { desc = "FZF Diagnostics Workspace" })
+
+local wk = require("which-key")
+wk.setup({})
+wk.add({
+	{ "<leader>b", group = "Buffer / Breakpoint" },
+	{ "<leader>c", group = "Code / Clear" },
+	{ "<leader>d", group = "Debug / Diagnostics" },
+	{ "<leader>f", group = "Find (FZF)" },
+	{ "<leader>g", group = "Goto / Definition" },
+	{ "<leader>h", group = "Git Hunks" },
+	{ "<leader>n", group = "Next" },
+	{ "<leader>o", group = "Organize" },
+	{ "<leader>p", group = "Path / Previous" },
+	{ "<leader>r", group = "Rename" },
+	{ "<leader>s", group = "Split Window" },
+	{ "<leader>t", group = "Terminal / Toggle" },
+})
+
+require("oil").setup({})
+require("trouble").setup({})
 
 require("mini.ai").setup({})
 require("mini.comment").setup({})
@@ -664,56 +694,58 @@ local function lsp_on_attach(ev)
 	end
 
 	local bufnr = ev.buf
-	local opts = { noremap = true, silent = true, buffer = bufnr }
+	local opts = function(desc)
+		return { noremap = true, silent = true, buffer = bufnr, desc = desc }
+	end
 
 	vim.keymap.set("n", "<leader>gd", function()
 		require("fzf-lua").lsp_definitions({ jump_to_single_result = true })
-	end, opts)
+	end, opts("Go to definition (FZF)"))
 
-	vim.keymap.set("n", "<leader>gD", vim.lsp.buf.definition, opts)
+	vim.keymap.set("n", "<leader>gD", vim.lsp.buf.definition, opts("Go to definition"))
 
 	vim.keymap.set("n", "<leader>gS", function()
 		vim.cmd("vsplit")
 		vim.lsp.buf.definition()
-	end, opts)
+	end, opts("Go to definition in split"))
 
-	vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
-	vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+	vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts("Code action"))
+	vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts("Rename symbol"))
 
 	vim.keymap.set("n", "<leader>D", function()
 		vim.diagnostic.open_float({ scope = "line" })
-	end, opts)
+	end, opts("Line diagnostics"))
 	vim.keymap.set("n", "<leader>d", function()
 		vim.diagnostic.open_float({ scope = "cursor" })
-	end, opts)
+	end, opts("Cursor diagnostics"))
 	vim.keymap.set("n", "<leader>nd", function()
 		vim.diagnostic.jump({ count = 1 })
-	end, opts)
+	end, opts("Next diagnostic"))
 
 	vim.keymap.set("n", "<leader>pd", function()
 		vim.diagnostic.jump({ count = -1 })
-	end, opts)
+	end, opts("Previous diagnostic"))
 
-	vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+	vim.keymap.set("n", "K", vim.lsp.buf.hover, opts("Hover documentation"))
 
 	vim.keymap.set("n", "<leader>fd", function()
 		require("fzf-lua").lsp_definitions({ jump_to_single_result = true })
-	end, opts)
+	end, opts("FZF LSP definitions"))
 	vim.keymap.set("n", "<leader>fr", function()
 		require("fzf-lua").lsp_references()
-	end, opts)
+	end, opts("FZF LSP references"))
 	vim.keymap.set("n", "<leader>ft", function()
 		require("fzf-lua").lsp_typedefs()
-	end, opts)
+	end, opts("FZF LSP type definitions"))
 	vim.keymap.set("n", "<leader>fs", function()
 		require("fzf-lua").lsp_document_symbols()
-	end, opts)
+	end, opts("FZF LSP document symbols"))
 	vim.keymap.set("n", "<leader>fw", function()
 		require("fzf-lua").lsp_workspace_symbols()
-	end, opts)
+	end, opts("FZF LSP workspace symbols"))
 	vim.keymap.set("n", "<leader>fi", function()
 		require("fzf-lua").lsp_implementations()
-	end, opts)
+	end, opts("FZF LSP implementations"))
 
 	if client:supports_method("textDocument/codeAction", bufnr) then
 		vim.keymap.set("n", "<leader>oi", function()
@@ -725,7 +757,7 @@ local function lsp_on_attach(ev)
 			vim.defer_fn(function()
 				vim.lsp.buf.format({ bufnr = bufnr })
 			end, 50)
-		end, opts)
+		end, opts("Organize imports"))
 	end
 end
 
@@ -800,6 +832,21 @@ do
 	local go_revive = require("efmls-configs.linters.go_revive")
 	local gofumpt = require("efmls-configs.formatters.gofumpt")
 
+	local ktlint = {
+		prefix = "ktlint",
+		lintSource = "efm/ktlint",
+		lintCommand = "ktlint --reporter=plain ${INPUT}",
+		lintStdin = false,
+		lintIgnoreExitCode = true,
+		lintFormats = { "%f:%l:%c: %m" },
+		rootMarkers = { ".editorconfig" },
+	}
+	local ktlint_fmt = {
+		formatCommand = "ktlint --format --stdin",
+		formatStdin = true,
+		rootMarkers = { ".editorconfig" },
+	}
+
 	vim.lsp.config("efm", {
 		filetypes = {
 			"c",
@@ -811,6 +858,7 @@ do
 			"javascriptreact",
 			"json",
 			"jsonc",
+			"kotlin",
 			"lua",
 			"markdown",
 			"python",
@@ -832,6 +880,7 @@ do
 				javascriptreact = { eslint_d, prettier_d },
 				json = { eslint_d, fixjson },
 				jsonc = { eslint_d, fixjson },
+				kotlin = { ktlint, ktlint_fmt },
 				lua = { luacheck, stylua },
 				markdown = { prettier_d },
 				python = { flake8, black },
@@ -855,11 +904,48 @@ vim.lsp.enable({
 	"efm",
 })
 
+require("kotlin").setup({
+	root_markers = {
+		"settings.gradle",
+		"settings.gradle.kts",
+		"build.gradle",
+		"build.gradle.kts",
+		"pom.xml",
+		"gradlew",
+		"mvnw",
+		".git",
+	},
+	inlay_hints = {
+		enabled = true,
+		parameters = true,
+		parameters_compiled = true,
+		types_property = true,
+		types_variable = true,
+		function_return = true,
+		function_parameter = true,
+		lambda_return = true,
+		lambda_receivers_parameters = true,
+		value_ranges = true,
+	},
+})
+
 -- ============================================================================
 -- DAP CONFIG
 -- ============================================================================
 local dap, dapui = require("dap"), require("dapui")
 dapui.setup()
+
+dap.configurations.kotlin = {
+	{
+		type = "kotlin",
+		request = "attach",
+		name = "Attach to Kotlin / JVM process (port 5005)",
+		projectRoot = vim.fn.getcwd,
+		hostName = "localhost",
+		port = 5005,
+		timeout = 30000,
+	},
+}
 
 dap.adapters.codelldb = {
 	type = "executable",
