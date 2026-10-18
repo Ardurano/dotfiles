@@ -1,0 +1,8 @@
+# herdr runtime state (sockets, logs, session data)
+home/.config/herdr/*.sock
+home/.config/herdr/*.log
+home/.config/herdr/session.json
+home/.config/herdr/release-notes.json
+
+# validation evidence must never be committed to this public repo
+.no-mistakes/
