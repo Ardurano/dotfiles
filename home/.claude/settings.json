@@ -57,7 +57,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-opus-4-8",
+  "model": "sonnet",
   "hooks": {
     "SessionStart": [
       {
@@ -90,5 +90,10 @@
     }
   },
   "effortLevel": "high",
-  "theme": "dark"
+  "theme": "auto",
+  "modelSettings": {
+    "claude-sonnet-5-5": {
+      "effortLevel": "high"
+    }
+  }
 }

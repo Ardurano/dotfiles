@@ -34,9 +34,9 @@ vim.opt.wrap = false -- do not wrap lines by default
 vim.opt.scrolloff = 15 -- keep 10 lines above/below cursor
 vim.opt.sidescrolloff = 10 -- keep 10 lines to left/right of cursor
 
-vim.opt.tabstop = 2 -- tabwidth
-vim.opt.shiftwidth = 2 -- indent width
-vim.opt.softtabstop = 2 -- soft tab stop not tabs on tab/backspace
+vim.opt.tabstop = 4 -- tabwidth
+vim.opt.shiftwidth = 4 -- indent width
+vim.opt.softtabstop = 4 -- soft tab stop not tabs on tab/backspace
 vim.opt.expandtab = true -- use spaces instead of tabs
 vim.opt.smartindent = true -- smart auto-indent
 vim.opt.autoindent = true -- copy indent from current line
@@ -578,7 +578,7 @@ wk.setup({})
 wk.add({
 	{ "<leader>b", group = "Buffer / Breakpoint" },
 	{ "<leader>c", group = "Code / Clear" },
-	{ "<leader>d", group = "Debug / Diagnostics" },
+	{ "<leader>d", group = "Debug / Diagnostics / Evaluate" },
 	{ "<leader>f", group = "Find (FZF)" },
 	{ "<leader>g", group = "Goto / Definition" },
 	{ "<leader>h", group = "Git Hunks" },
@@ -935,6 +935,11 @@ require("kotlin").setup({
 local dap, dapui = require("dap"), require("dapui")
 dapui.setup()
 
+dap.adapters.kotlin = {
+	type = "executable",
+	command = vim.fn.stdpath("data") .. "/mason/bin/kotlin-debug-adapter",
+}
+
 dap.configurations.kotlin = {
 	{
 		type = "kotlin",
@@ -977,8 +982,8 @@ dap.listeners.after.event_exited.dapui_config = function()
 end
 
 -- Breakpoints
-vim.keymap.set("n", "<Leader>b", dap.toggle_breakpoint, { desc = "Toggle Breakpoint" })
-vim.keymap.set("n", "<Leader>B", function()
+vim.keymap.set("n", "<Leader>bb", dap.toggle_breakpoint, { desc = "Toggle Breakpoint" })
+vim.keymap.set("n", "<Leader>bB", function()
 	dap.set_breakpoint(vim.fn.input("Condition: "))
 end, { desc = "Conditional Breakpoint" })
 
@@ -991,6 +996,172 @@ vim.keymap.set("n", "<leader>dO", dap.step_out, { desc = "Debug: Step Out" })
 -- UI
 vim.keymap.set("n", "<Leader>du", dapui.toggle, { desc = "Toggle DAP UI" })
 vim.keymap.set("n", "<Leader>dr", dap.repl.open, { desc = "Open REPL" })
+vim.keymap.set("n", "<Leader>de", function() dapui.eval() end, { desc = "Evaluate expr under cursor" })
+vim.keymap.set("v", "<Leader>de", function() dapui.eval() end, { desc = "Evaluate selected expr" })
+
+-- ============================================================================
+-- KOTLIN TEST DEBUGGER (Treesitter-powered)
+-- ============================================================================
+
+-- Walk up from the current file to find the directory containing gradlew
+local function find_gradle_root()
+	local path = vim.fn.expand("%:p:h")
+	while path ~= "/" do
+		if vim.fn.filereadable(path .. "/gradlew") == 1 then
+			return path
+		end
+		path = vim.fn.fnamemodify(path, ":h")
+	end
+	return vim.fn.getcwd()
+end
+
+-- Extract package / class / function-under-cursor via Treesitter
+local function kotlin_ts_get(query_type)
+	local bufnr = vim.api.nvim_get_current_buf()
+	local ok, parser = pcall(vim.treesitter.get_parser, bufnr, "kotlin")
+	if not ok or not parser then
+		vim.notify("No Kotlin Treesitter parser – run :TSInstall kotlin", vim.log.levels.ERROR)
+		return nil
+	end
+	local root = parser:parse()[1]:root()
+
+	if query_type == "package" then
+		for node in root:iter_children() do
+			if node:type() == "package_header" then
+				local text = vim.treesitter.get_node_text(node, bufnr)
+				return text:match("^package%s+(.+)$")
+			end
+		end
+		return nil
+	end
+
+	if query_type == "class" then
+		for node in root:iter_children() do
+			if node:type() == "class_declaration" then
+				for child in node:iter_children() do
+					if child:type() == "type_identifier" then
+						return vim.treesitter.get_node_text(child, bufnr)
+					end
+				end
+			end
+		end
+		return nil
+	end
+
+	if query_type == "function" then
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		local row, col = cursor[1] - 1, cursor[2]
+		local node = root:named_descendant_for_range(row, col, row, col)
+		while node do
+			if node:type() == "function_declaration" then
+				for child in node:iter_children() do
+					if child:type() == "simple_identifier" then
+						return vim.treesitter.get_node_text(child, bufnr)
+					end
+				end
+			end
+			node = node:parent()
+		end
+		return nil
+	end
+end
+
+-- Launch Gradle in debug-jvm mode then auto-attach DAP
+-- Poll host:port every 500 ms until it accepts a connection, then call cb()
+local function wait_for_port(host, port, timeout_ms, cb)
+	local elapsed = 0
+	local interval = 500
+	local timer = vim.uv.new_timer()
+	timer:start(0, interval, vim.schedule_wrap(function()
+		elapsed = elapsed + interval
+		local client = vim.uv.new_tcp()
+		client:connect(host, port, function(err)
+			if not err then
+				client:close()
+				timer:stop()
+				timer:close()
+				vim.schedule(cb) -- must be in main loop; connect cb is a fast-event context
+			else
+				client:close()
+				if elapsed >= timeout_ms then
+					timer:stop()
+					timer:close()
+					vim.notify("Timed out waiting for debug port " .. port, vim.log.levels.ERROR)
+				end
+			end
+		end)
+	end))
+end
+
+local function kotlin_debug_launch(test_spec)
+	local gradle_root = find_gradle_root()
+	local gradlew = gradle_root .. "/gradlew"
+	vim.notify("⏳ Launching Gradle\ncwd: " .. gradle_root .. "\ntest: " .. test_spec, vim.log.levels.INFO)
+
+	local function on_output(_, data)
+		if not data then return end
+		local msg = table.concat(data, "\n"):gsub("^%s*(.-)%s*$", "%1")
+		if msg ~= "" then
+			vim.schedule(function()
+				vim.notify("Gradle: " .. msg, vim.log.levels.INFO)
+			end)
+		end
+	end
+
+	local job_id = vim.fn.jobstart(
+		{ gradlew, "test", "--tests", test_spec, "--debug-jvm" },
+		{
+			cwd = gradle_root,
+			on_stdout = on_output,
+			on_stderr = on_output,
+			on_exit = function(_, code)
+				vim.schedule(function()
+					if code ~= 0 then
+						vim.notify("Gradle exited with code " .. code, vim.log.levels.ERROR)
+					end
+				end)
+			end,
+		}
+	)
+
+	if job_id <= 0 then
+		vim.notify(
+			"Failed to start Gradle (job_id=" .. job_id .. ")\nIs gradlew executable? Try: chmod +x " .. gradlew,
+			vim.log.levels.ERROR
+		)
+		return
+	end
+
+	wait_for_port("127.0.0.1", 5005, 30000, function()
+		vim.notify("✅ Debug port ready – attaching", vim.log.levels.INFO)
+		dap.continue()
+	end)
+end
+
+-- <leader>dt  – debug the single test function under cursor
+vim.keymap.set("n", "<leader>dt", function()
+	local pkg = kotlin_ts_get("package")
+	local cls = kotlin_ts_get("class")
+	local fn = kotlin_ts_get("function")
+	if not cls or not fn then
+		vim.notify("Could not detect test function under cursor", vim.log.levels.WARN)
+		return
+	end
+	local spec = (pkg and (pkg .. ".") or "") .. cls .. "." .. fn
+	kotlin_debug_launch(spec)
+end, { desc = "Debug: Kotlin test under cursor" })
+
+-- <leader>dT  – debug the entire test class
+vim.keymap.set("n", "<leader>dT", function()
+	local pkg = kotlin_ts_get("package")
+	local cls = kotlin_ts_get("class")
+	if not cls then
+		vim.notify("Could not detect test class", vim.log.levels.WARN)
+		return
+	end
+	local spec = (pkg and (pkg .. ".") or "") .. cls
+	kotlin_debug_launch(spec)
+end, { desc = "Debug: Kotlin test class" })
 
 -- ============================================================================
 -- FLOATING TERMINAL
