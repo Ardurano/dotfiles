@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "when": "The task is a review, audit, investigation, diagnosis, or planning deliverable rather than a code change.",
+      "use": { "harness": "claude", "model": "opus", "effort": "xhigh" },
+      "why": "Judgment-heavy knowledge work gets the strongest model."
+    }
+  ],
+  "default": { "harness": "claude", "model": "sonnet", "effort": "high" }
+}

@@ -57,7 +57,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "sonnet",
+  "model": "opus",
   "hooks": {
     "SessionStart": [
       {
@@ -69,6 +69,36 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gh-axi",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "chrome-devtools-axi",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lavish-axi",
+            "timeout": 10
+          }
+        ]
       }
     ]
   },
@@ -77,8 +107,8 @@
     "command": "bash '/Users/arnej/.claude/statusline-command.sh'"
   },
   "enabledPlugins": {
-    "compound-engineering@compound-engineering-plugin": true,
-    "superpowers@claude-plugins-official": false,
+    "compound-engineering@compound-engineering-plugin": false,
+    "superpowers@claude-plugins-official": true,
     "mattpocock-skills@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
@@ -90,10 +120,13 @@
     }
   },
   "effortLevel": "high",
-  "theme": "auto",
   "modelSettings": {
     "claude-sonnet-5-5": {
       "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "high"
     }
-  }
+  },
+  "theme": "auto"
 }

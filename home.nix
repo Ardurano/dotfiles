@@ -75,7 +75,16 @@ in
   # programs.zsh.initContent narrows this to vim over ssh.
   home.sessionVariables.EDITOR = "nvim";
   # The native Claude installer lives here. Prepended by the old ~/.zshrc.
-  home.sessionPath = [ "$HOME/.local/bin" ];
+  # ~/.npm-global/bin holds npm globals - see the ~/.npmrc entry below.
+  home.sessionPath = [ "$HOME/.local/bin" "$HOME/.npm-global/bin" ];
+
+  # Nix's npm defaults its global prefix into the read-only store, so
+  # `npm install -g` fails. Point it at a mutable prefix instead: the firstmate
+  # *-axi CLIs are not in nixpkgs and firstmate's bootstrap upgrades them
+  # itself, the same mutable-toolchain call as ~/.rustup and ~/.pyenv.
+  home.file.".npmrc".text = ''
+    prefix=${config.home.homeDirectory}/.npm-global
+  '';
 
   # Home Manager owns ~/.zshrc, ~/.zshenv and ~/.zprofile. Anything secret or
   # employer-specific lives in an untracked ~/.zshrc.local, sourced at the end -
@@ -230,4 +239,13 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/AGENTS.md";
   home.file.".config/opencode/AGENTS.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/AGENTS.md";
+
+  # Firstmate's authored operating choices. Only these files are linked; the
+  # rest of its config/, data/ and state/ is runtime state that stays local.
+  home.file."Github/firstmate/config/crew-dispatch.json".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/firstmate/config/crew-dispatch.json";
+  home.file."Github/firstmate/config/secondmate-harness".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/firstmate/config/secondmate-harness";
+  home.file."Github/firstmate/config/brief-include.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/firstmate/config/brief-include.md";
 }
